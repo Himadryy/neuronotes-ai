@@ -1,8 +1,9 @@
+langchain-google-genai
+google-generativeai
 fastapi
 uvicorn
 python-multipart
 langchain
-langchain-openai
 langchain-community
 langchain-chroma
 langchain-text-splitters
@@ -12,4 +13,4 @@ pillow
 pymupdf
 fitz
 chromadb
-openai
+python-dotenv

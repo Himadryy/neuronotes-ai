@@ -1,7 +1,11 @@
-from typing import List
+import os
+from typing import List, cast
 from pydantic import BaseModel, Field, field_validator
 from langchain_core.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 1. Define the Pydantic Schema for strict JSON enforcement
 class MCQQuestion(BaseModel):
@@ -27,20 +31,19 @@ class QuizOutput(BaseModel):
             raise ValueError("Exactly 5 questions must be generated.")
         return v
 
-def generate_quiz_with_retries(context_text: str, openai_api_key: str) -> QuizOutput:
+def generate_quiz_with_retries(context_text: str, google_api_key: str) -> QuizOutput:
     """
-    Generates a 5-question MCQ quiz from text utilizing modern LLM structured outputs.
-    This natively handles retries and ensures valid JSON structure automatically.
+    Generates a 5-question MCQ quiz from text utilizing Google's Gemini models.
     """
     
-    # Initialize the LLM
-    llm = ChatOpenAI(
-        model="gpt-4o", 
+    # Initialize the Gemini LLM
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash", 
         temperature=0.7, 
-        openai_api_key=openai_api_key
+        google_api_key=google_api_key
     )
 
-    # 2. Use modern LangChain with_structured_output (Native retry + Function Calling)
+    # 2. Use with_structured_output for Gemini
     structured_llm = llm.with_structured_output(QuizOutput)
     
     # 3. Create the Prompt
@@ -50,6 +53,8 @@ def generate_quiz_with_retries(context_text: str, openai_api_key: str) -> QuizOu
     
     Notes:
     {context}
+    
+    IMPORTANT: You must return the response as a JSON object matching the requested schema.
     """
     
     prompt = PromptTemplate(
@@ -60,15 +65,9 @@ def generate_quiz_with_retries(context_text: str, openai_api_key: str) -> QuizOu
     # Prepare the input
     formatted_input = prompt.format(context=context_text)
     
-    # Execute generation - returning the Pydantic object directly
-    return structured_llm.invoke(formatted_input)
+    # Execute generation
+    result = structured_llm.invoke(formatted_input)
+    return cast(QuizOutput, result)
 
 if __name__ == "__main__":
-    # Mock usage
-    API_KEY = "sk-..." # User should provide their key
-    NOTES = "The process of photosynthesis converts light energy into chemical energy..."
-    
-    # In a real scenario, call:
-    # quiz = generate_quiz_with_retries(NOTES, API_KEY)
-    # print(quiz.model_dump_json(indent=2))
-    print("Quiz generator module initialized with Pydantic v2 schema and modern structured output.")
+    print("Quiz generator module initialized with Gemini and Pydantic v2 schema.")

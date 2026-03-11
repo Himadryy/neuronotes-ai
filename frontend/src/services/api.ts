@@ -35,7 +35,7 @@ export const chatWithAI = async (message: string, context: string = '', history:
 export interface QuizQuestion {
   question: string;
   options: string[];
-  correct_answer: string | number;
+  correct_answer: string;
   explanation: string;
 }
 
@@ -48,21 +48,20 @@ export const generateQuiz = async (text: string): Promise<{ questions: QuizQuest
 
 export const getKnowledgeGraph = async (): Promise<{ nodes: Node[]; edges: Edge[] }> => {
   // Knowledge graph is currently a mock because it requires specialized extraction logic
-  // but we can simulate it using the provided text if needed.
-  // For now, keeping the mock but pointing it towards a potential endpoint.
-  
-  // const response = await api.post('/knowledge-graph', { text });
-  // return response.data;
-
   return {
     nodes: [
-      { id: '1', position: { x: 250, y: 50 }, data: { label: 'Core Concept' }, type: 'default', className: 'bg-indigo-600 border-indigo-500 text-white rounded-xl shadow-lg font-bold px-6 py-3' },
-      { id: '2', position: { x: 100, y: 150 }, data: { label: 'Supporting Idea A' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
-      { id: '3', position: { x: 400, y: 150 }, data: { label: 'Supporting Idea B' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' }
+      { id: '1', position: { x: 250, y: 50 }, data: { label: 'Artificial Intelligence' }, type: 'default', className: 'bg-indigo-600 border-indigo-500 text-white rounded-xl shadow-lg font-bold px-6 py-3' },
+      { id: '2', position: { x: 100, y: 150 }, data: { label: 'Machine Learning' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
+      { id: '3', position: { x: 400, y: 150 }, data: { label: 'Deep Learning' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
+      { id: '4', position: { x: 250, y: 250 }, data: { label: 'Neural Networks' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
+      { id: '5', position: { x: 100, y: 350 }, data: { label: 'Data Science' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-slate-300 rounded-lg shadow px-4 py-2' }
     ],
     edges: [
       { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#6366f1' } },
-      { id: 'e1-3', source: '1', target: '3', animated: true, style: { stroke: '#6366f1' } }
+      { id: 'e1-3', source: '1', target: '3', animated: true, style: { stroke: '#6366f1' } },
+      { id: 'e2-4', source: '2', target: '4', animated: true, style: { stroke: '#94a3b8' } },
+      { id: 'e3-4', source: '3', target: '4', animated: true, style: { stroke: '#94a3b8' } },
+      { id: 'e2-5', source: '2', target: '5', style: { stroke: '#475569', strokeDasharray: '5,5' } }
     ]
   };
 };

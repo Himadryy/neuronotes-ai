@@ -1,19 +1,24 @@
 # NeuroNotes AI - RAG Pipeline
 
-NeuroNotes AI is an AI-powered study assistant that helps students transform their notes into clear summaries, quizzes, and explanations to improve learning efficiency. This repository contains the RAG (Retrieval-Augmented Generation) pipeline backend.
+NeuroNotes AI is an AI-powered study assistant that helps students transform their notes into clear summaries, quizzes, and explanations to improve learning efficiency.
 
 ## Features
 - **File Ingestion:** Accepts `.txt`, `.pdf`, `.png`, and `.jpg` file formats.
 - **OCR Support:** Built-in Tesseract OCR integration for extracting text from images and scanned PDFs.
 - **Document Chunking:** Efficiently splits long lecture notes into manageable chunks while preserving context using LangChain.
-- **Quiz Generation:** Autonomously generates challenging 5-question multiple-choice quizzes using OpenAI's structured outputs.
+- **Quiz Generation:** Autonomously generates challenging 5-question multiple-choice quizzes using Google's Gemini models.
+- **AI Chat:** Interactive chat tutor that uses your uploaded notes as context.
+- **Modern UI:** Premium dark-themed dashboard built with Next.js and Tailwind CSS.
 
 ## Requirements
 - Python 3.9+
+- Node.js 18+
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) installed and added to your system PATH.
-- An active OpenAI API Key.
+- An active Google Gemini API Key.
 
 ## Setup Instructions
+
+### Backend (Python)
 
 1. **Clone the repository:**
    ```bash
@@ -21,7 +26,7 @@ NeuroNotes AI is an AI-powered study assistant that helps students transform the
    cd neuronotes-ai
    ```
 
-2. **Create a virtual environment (Optional but recommended):**
+2. **Create a virtual environment:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows use: venv\Scripts\activate
@@ -33,34 +38,43 @@ NeuroNotes AI is an AI-powered study assistant that helps students transform the
    ```
 
 4. **Set your API Key:**
-   Export your OpenAI API key as an environment variable before running the application:
    ```bash
-   # On Windows (PowerShell)
-   $env:OPENAI_API_KEY="sk-your-api-key-here"
-
    # On macOS/Linux
-   export OPENAI_API_KEY="sk-your-api-key-here"
+   export GOOGLE_API_KEY="your-gemini-api-key"
    ```
 
-## Running the Server
+5. **Start the FastAPI server:**
+   ```bash
+   python main.py
+   ```
 
-Start the FastAPI development server:
-```bash
-python main.py
-```
-The API will be available at `http://localhost:8000`. You can access the interactive Swagger documentation at `http://localhost:8000/docs`.
+### Frontend (Next.js)
+
+1. **Navigate to the frontend directory:**
+   ```bash
+   cd frontend
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
 
 ## API Endpoints
 
-### `POST /upload-notes`
-Upload a document or image containing study notes. The system will extract the text, clean it, and chunk it.
-- **Body:** `multipart/form-data` (Attach a file under the key `file`).
+### `POST /api/upload`
+Upload a document or image. Returns extracted text and chunk metadata.
 
-### `POST /generate-quiz`
-Generate a quiz based on the extracted text.
-- **Body:** JSON
-  ```json
-  {
-    "text": "Your study notes or specific topic text here."
-  }
-  ```
+### `POST /api/generate-quiz`
+Generate a quiz based on text.
+
+### `POST /api/chat`
+Chat with AI using uploaded notes as context.
+
+### `POST /api/summarize`
+Generate a concise summary of your notes.

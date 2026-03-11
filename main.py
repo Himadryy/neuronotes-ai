@@ -6,14 +6,14 @@ from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
-# Add the parent directory to sys.path so we can import other modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv()
 
 # Import our independent modules
-from data_processing.ingestion import extract_text_from_file
-from data_processing.processor import process_lecture_text
-from ai_core.quiz_generator import generate_quiz_with_retries
+from ingestion import extract_text_from_file
+from processor import process_lecture_text
+from quiz_generator import generate_quiz_with_retries
 
 app = FastAPI(title="NeuroNotes AI RAG Pipeline")
 
@@ -26,8 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Setup your OpenAI API key (use environment variables in production)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-api-key-here")
+# Setup your Gemini API key
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "[REDACTED_GEMINI_KEY]")
 
 class QuizRequest(BaseModel):
     text: str
@@ -90,7 +90,7 @@ async def generate_quiz(request: QuizRequest):
             raise ValueError("Input text cannot be empty.")
             
         # Call the quiz generation function
-        quiz_output = generate_quiz_with_retries(request.text, OPENAI_API_KEY)
+        quiz_output = generate_quiz_with_retries(request.text, GOOGLE_API_KEY)
         
         # Pydantic v2 serialization
         return quiz_output.model_dump()
@@ -105,12 +105,10 @@ async def summarize(request: SummaryRequest):
     Generates a summary of the provided text.
     """
     try:
-        # For now, we'll use a simple prompt since we already have OpenAI integrated
-        # In a real scenario, this would be its own module
-        from langchain_openai import ChatOpenAI
+        from langchain_google_genai import ChatGoogleGenerativeAI
         from langchain_core.prompts import PromptTemplate
         
-        llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY)
         prompt = PromptTemplate.from_template("Summarize the following study material into clear, concise bullet points:\n\n{text}")
         response = llm.invoke(prompt.format(text=request.text[:8000]))
         
@@ -124,10 +122,10 @@ async def chat(request: ChatRequest):
     Basic chat endpoint for interacting with study notes.
     """
     try:
-        from langchain_openai import ChatOpenAI
+        from langchain_google_genai import ChatGoogleGenerativeAI
         from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
         
-        llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=GOOGLE_API_KEY)
         
         system_content = "You are a helpful study assistant. Help the student understand their notes."
         if request.context:

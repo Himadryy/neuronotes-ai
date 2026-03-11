@@ -76,9 +76,7 @@ export function QuizGenerator() {
   const calculateScore = () => {
     let score = 0;
     questions.forEach((q, idx) => {
-      // The backend returns correct_answer as a string matching an option
-      const selectedOption = q.options[selectedAnswers[idx]];
-      if (selectedOption === q.correct_answer) {
+      if (q.options[selectedAnswers[idx]] === q.correct_answer) {
         score++;
       }
     });
@@ -225,8 +223,7 @@ export function QuizGenerator() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                key={i}
- 
+                key={i} 
                 className="p-6 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-white/5 shadow-lg"
               >
                 <p className="text-slate-100 font-semibold mb-5 text-lg leading-relaxed">
@@ -315,6 +312,7 @@ export function QuizGenerator() {
           <div className="space-y-4">
             {currentQ.options.map((option, idx) => {
               const isSelected = selectedAnswers[currentQuestionIdx] === idx;
+              
               return (
                 <motion.button
                   whileHover={{ scale: 1.01 }}
