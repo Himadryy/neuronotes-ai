@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+  }
+
+  html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    @apply bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-slate-50 antialiased;
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+}
+
+@layer components {
+  /* Enhanced Glass Panel - Ultra premium */
+  .glass-panel {
+    @apply bg-gradient-to-br from-slate-900/50 to-slate-800/30 backdrop-blur-2xl border border-white/10 shadow-2xl;
+  }
+
+  /* Enhanced Glass Card - Softer version */
+  .glass-card {
+    @apply bg-gradient-to-br from-slate-900/40 to-slate-800/20 backdrop-blur-xl border border-white/10 shadow-lg transition-all duration-300;
+  }
+
+  /* Premium Hover Glow */
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:border-indigo-500/50 hover:bg-slate-800/50;
+  }
+
+  /* Gradient Text Effect */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300;
+  }
+
+  /* Gradient Button - Primary */
+  .btn-gradient {
+    @apply bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] hover:scale-105 active:scale-95;
+  }
+
+  /* Gradient Button - Secondary */
+  .btn-gradient-secondary {
+    @apply bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:scale-105 active:scale-95;
+  }
+
+  /* Glass Button */
+  .btn-glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 hover:bg-white/20 hover:border-white/30 active:scale-95;
+  }
+
+  /* Card Hover Lift */
+  .card-hover {
+    @apply transition-all duration-300 hover:translate-y-[-8px] hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)];
+  }
+
+  /* Smooth text color transition */
+  .text-smooth {
+    @apply transition-colors duration-300;
+  }
+
+  /* Glow effect for text */
+  .text-glow {
+    @apply drop-shadow-[0_0_8px_rgba(99,102,241,0.3)];
+  }
+
+  /* Icon with gradient background */
+  .icon-gradient {
+    @apply bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl p-2 shadow-lg shadow-indigo-500/20;
+  }
+
+  /* Active indicator bar */
+  .active-bar {
+    @apply h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full;
+  }
+
+  /* Subtle glow border */
+  .glow-border {
+    @apply border border-white/10 hover:border-indigo-500/50 hover:shadow-[0_0_20px_rgba(99,102,241,0.2)];
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-fade-in {
+    @apply animate-in fade-in duration-300;
+  }
+
+  .animate-slide-up {
+    @apply animate-in slide-in-from-bottom-4 duration-300;
+  }
+
+  .animate-slide-down {
+    @apply animate-in slide-in-from-top-4 duration-300;
+  }
+
+  .animate-glow {
+    animation: glow 3s ease-in-out infinite;
+  }
+
+  /* Backdrop utilities */
+  .backdrop-glow {
+    @apply backdrop-blur-2xl;
+  }
+
+  /* Shadow utilities */
+  .shadow-glow-lg {
+    @apply shadow-[0_0_40px_rgba(99,102,241,0.2)];
+  }
+
+  .shadow-glow-sm {
+    @apply shadow-[0_0_20px_rgba(99,102,241,0.1)];
+  }
+
+  /* Border utilities */
+  .border-glow {
+    @apply border border-white/10;
+  }
+}
+
+/* Custom animations */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Premium smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, rgba(99, 102, 241, 0.5), rgba(139, 92, 246, 0.5));
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+  border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.4));
+}
+
