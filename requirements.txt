@@ -13,3 +13,4 @@ pymupdf
 fitz
 chromadb
 openai
+python-dotenv

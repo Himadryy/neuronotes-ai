@@ -11,9 +11,6 @@ from quiz_generator import generate_quiz_with_retries
 
 app = FastAPI(title="RAG Pipeline API")
 
-# Setup your OpenAI API key (use environment variables in production)
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-api-key-here")
-
 class QuizRequest(BaseModel):
     text: str
 
@@ -63,7 +60,7 @@ async def generate_quiz(request: QuizRequest):
             raise ValueError("Input text cannot be empty.")
             
         # Call the quiz generation function
-        quiz_output = generate_quiz_with_retries(request.text, OPENAI_API_KEY)
+        quiz_output = generate_quiz_with_retries(request.text)
         
         # Pydantic v2 serialization
         return quiz_output.model_dump()
