@@ -5,7 +5,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # 1. Define the Pydantic Schema for strict JSON enforcement
 class MCQQuestion(BaseModel):
@@ -38,7 +38,7 @@ def generate_quiz_with_retries(context_text: str, google_api_key: str) -> QuizOu
     
     # Initialize the Gemini LLM
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", 
+        model="gemini-flash-latest", 
         temperature=0.7, 
         google_api_key=google_api_key
     )

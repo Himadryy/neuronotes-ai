@@ -46,24 +46,26 @@ export const generateQuiz = async (text: string): Promise<{ questions: QuizQuest
   };
 };
 
-export const getKnowledgeGraph = async (): Promise<{ nodes: Node[]; edges: Edge[] }> => {
-  // Knowledge graph is currently a mock because it requires specialized extraction logic
-  return {
-    nodes: [
-      { id: '1', position: { x: 250, y: 50 }, data: { label: 'Artificial Intelligence' }, type: 'default', className: 'bg-indigo-600 border-indigo-500 text-white rounded-xl shadow-lg font-bold px-6 py-3' },
-      { id: '2', position: { x: 100, y: 150 }, data: { label: 'Machine Learning' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
-      { id: '3', position: { x: 400, y: 150 }, data: { label: 'Deep Learning' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
-      { id: '4', position: { x: 250, y: 250 }, data: { label: 'Neural Networks' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-white rounded-lg shadow px-4 py-2' },
-      { id: '5', position: { x: 100, y: 350 }, data: { label: 'Data Science' }, type: 'default', className: 'bg-slate-800 border-slate-700 text-slate-300 rounded-lg shadow px-4 py-2' }
-    ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: '#6366f1' } },
-      { id: 'e1-3', source: '1', target: '3', animated: true, style: { stroke: '#6366f1' } },
-      { id: 'e2-4', source: '2', target: '4', animated: true, style: { stroke: '#94a3b8' } },
-      { id: 'e3-4', source: '3', target: '4', animated: true, style: { stroke: '#94a3b8' } },
-      { id: 'e2-5', source: '2', target: '5', style: { stroke: '#475569', strokeDasharray: '5,5' } }
-    ]
-  };
+export const getKnowledgeGraph = async (text: string): Promise<{ nodes: Node[]; edges: Edge[] }> => {
+  const response = await api.post('/knowledge-graph', { text });
+  
+  // Transform backend response into ReactFlow format if needed
+  const nodes: Node[] = response.data.nodes.map((n: any, idx: number) => ({
+    id: n.id,
+    data: { label: n.label },
+    position: { x: 250 + (idx * 50), y: 100 + (idx * 100) }, // Better layout later
+    type: 'default'
+  }));
+
+  const edges: Edge[] = response.data.edges.map((e: any) => ({
+    id: `e-${e.source}-${e.target}`,
+    source: e.source,
+    target: e.target,
+    label: e.label,
+    animated: true
+  }));
+
+  return { nodes, edges };
 };
 
 export default api;

@@ -9,9 +9,14 @@ import { FileText, Sparkles, AlertCircle, BookOpen, Zap } from 'lucide-react';
 import { useAppContext } from '@/utils/AppContext';
 
 export default function UploadPage() {
-  const { setExtractedText, setFileName } = useAppContext();
-  const [localText, setLocalText] = useState<string>('');
+  const { extractedText, setExtractedText, setFileName } = useAppContext();
+  const [localText, setLocalText] = useState<string>(extractedText);
   const [summary, setSummary] = useState<string>('');
+  
+  // Update local state when global context changes (e.g., on mount)
+  useEffect(() => {
+    setLocalText(extractedText);
+  }, [extractedText]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -1,4 +1,6 @@
 .env
+user_activity.json
+ai_lecture.txt
 __pycache__/
 *.py[cod]
 *$py.class

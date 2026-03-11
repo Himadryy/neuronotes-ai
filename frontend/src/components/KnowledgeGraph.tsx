@@ -34,7 +34,7 @@ export function KnowledgeGraph() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getKnowledgeGraph();
+      const data = await getKnowledgeGraph(extractedText);
       if (data && data.nodes && data.edges) {
         // Enhance node styling with glassmorphism classes
         const enhancedNodes = data.nodes.map((n: Node) => {
@@ -67,8 +67,10 @@ export function KnowledgeGraph() {
   }, [extractedText, setNodes, setEdges]);
 
   useEffect(() => {
-    fetchGraphData();
-  }, [fetchGraphData]);
+    if (extractedText && nodes.length === 0) {
+      fetchGraphData();
+    }
+  }, [extractedText, fetchGraphData, nodes.length]);
 
   const defaultEdgeOptions = useMemo(() => ({
     animated: true,
