@@ -5,16 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateQuiz, QuizQuestion } from '@/services/api';
 import { Brain, CheckCircle2, XCircle, RefreshCw, Sparkles, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
 import DOMPurify from 'isomorphic-dompurify';
+import { useAppContext } from '@/utils/AppContext';
 
 export function QuizGenerator() {
+  const { extractedText } = useAppContext();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerateQuiz = async () => {
+    if (!extractedText) {
+      setError('Please upload notes first to generate a quiz.');
+      return;
+    }
+
     setIsGenerating(true);
     setQuestions([]);
     setSelectedAnswers({});
@@ -23,7 +30,7 @@ export function QuizGenerator() {
     setError(null);
 
     try {
-      const response = await generateQuiz();
+      const response = await generateQuiz(extractedText);
       
       const sanitizedQuestions = response.questions.map(q => ({
         ...q,
@@ -48,7 +55,7 @@ export function QuizGenerator() {
 
     setSelectedAnswers(prev => ({
       ...prev,
-      [questions[currentQuestionIdx].id]: optionIdx
+      [currentQuestionIdx]: optionIdx
     }));
   };
 
@@ -68,8 +75,10 @@ export function QuizGenerator() {
 
   const calculateScore = () => {
     let score = 0;
-    questions.forEach(q => {
-      if (selectedAnswers[q.id] === q.correctAnswer) {
+    questions.forEach((q, idx) => {
+      // The backend returns correct_answer as a string matching an option
+      const selectedOption = q.options[selectedAnswers[idx]];
+      if (selectedOption === q.correct_answer) {
         score++;
       }
     });
@@ -161,7 +170,7 @@ export function QuizGenerator() {
   }
 
   const currentQ = questions[currentQuestionIdx];
-  const isAnswered = selectedAnswers[currentQ.id] !== undefined;
+  const isAnswered = selectedAnswers[currentQuestionIdx] !== undefined;
 
   if (showResults) {
     const score = calculateScore();
@@ -208,15 +217,16 @@ export function QuizGenerator() {
             Review Answers
           </h3>
           {questions.map((q, i) => {
-            const userAnswer = selectedAnswers[q.id];
-            const isCorrect = userAnswer === q.correctAnswer;
+            const userAnswer = selectedAnswers[i];
+            const isCorrect = q.options[userAnswer] === q.correct_answer;
 
             return (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                key={q.id} 
+                key={i}
+ 
                 className="p-6 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-white/5 shadow-lg"
               >
                 <p className="text-slate-100 font-semibold mb-5 text-lg leading-relaxed">
@@ -228,7 +238,7 @@ export function QuizGenerator() {
                     let optionClass = "text-slate-400 bg-slate-800/30 border border-white/5";
                     let Icon = null;
 
-                    if (optIdx === q.correctAnswer) {
+                    if (opt === q.correct_answer) {
                       optionClass = "text-emerald-300 bg-emerald-500/10 border-emerald-500/30 font-medium shadow-[0_0_15px_rgba(52,211,153,0.1)]";
                       Icon = CheckCircle2;
                     } else if (optIdx === userAnswer && !isCorrect) {
@@ -304,8 +314,7 @@ export function QuizGenerator() {
           
           <div className="space-y-4">
             {currentQ.options.map((option, idx) => {
-              const isSelected = selectedAnswers[currentQ.id] === idx;
-              
+              const isSelected = selectedAnswers[currentQuestionIdx] === idx;
               return (
                 <motion.button
                   whileHover={{ scale: 1.01 }}

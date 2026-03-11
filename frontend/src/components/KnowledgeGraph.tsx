@@ -15,14 +15,22 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { getKnowledgeGraph } from '@/services/api';
 import { Network, AlertCircle, Sparkles } from 'lucide-react';
+import { useAppContext } from '@/utils/AppContext';
 
 export function KnowledgeGraph() {
+  const { extractedText } = useAppContext();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchGraphData = useCallback(async () => {
+    if (!extractedText) {
+      setError('Please upload notes first to visualize the knowledge graph.');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -56,7 +64,7 @@ export function KnowledgeGraph() {
     } finally {
       setIsLoading(false);
     }
-  }, [setNodes, setEdges]);
+  }, [extractedText, setNodes, setEdges]);
 
   useEffect(() => {
     fetchGraphData();

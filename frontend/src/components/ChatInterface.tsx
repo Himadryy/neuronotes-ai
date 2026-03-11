@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Bot, User, AlertCircle, Sparkles } from 'lucide-react';
 import { chatWithAI } from '@/services/api';
 import DOMPurify from 'isomorphic-dompurify';
+import { useAppContext } from '@/utils/AppContext';
 
 interface Message {
   id: string;
@@ -13,6 +14,7 @@ interface Message {
 }
 
 export function ChatInterface() {
+  const { extractedText } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -55,7 +57,7 @@ export function ChatInterface() {
 
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const response = await chatWithAI(sanitizedInput, history);
+      const response = await chatWithAI(sanitizedInput, extractedText, history);
       
       const cleanResponse = DOMPurify.sanitize(response.response);
       

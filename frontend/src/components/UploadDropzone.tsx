@@ -9,15 +9,15 @@ interface UploadDropzoneProps {
   isLoading: boolean;
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_TYPES = ['application/pdf', 'text/plain'];
+
 export function UploadDropzone({ onFileUpload, isLoading }: UploadDropzoneProps) {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
-  const ALLOWED_TYPES = ['application/pdf', 'text/plain'];
-
-  const validateFile = (file: File): boolean => {
+  const validateFile = useCallback((file: File): boolean => {
     setError(null);
     if (!ALLOWED_TYPES.includes(file.type)) {
       setError('Invalid file type. Only PDF and TXT files are allowed.');
@@ -28,7 +28,7 @@ export function UploadDropzone({ onFileUpload, isLoading }: UploadDropzoneProps)
       return false;
     }
     return true;
-  };
+  }, []);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -52,7 +52,7 @@ export function UploadDropzone({ onFileUpload, isLoading }: UploadDropzoneProps)
         onFileUpload(file);
       }
     }
-  }, [onFileUpload]);
+  }, [onFileUpload, validateFile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();

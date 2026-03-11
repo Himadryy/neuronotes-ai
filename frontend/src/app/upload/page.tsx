@@ -6,9 +6,11 @@ import { UploadDropzone } from '@/components/UploadDropzone';
 import { uploadNotes, generateSummary } from '@/services/api';
 import DOMPurify from 'isomorphic-dompurify';
 import { FileText, Sparkles, AlertCircle, BookOpen, Zap } from 'lucide-react';
+import { useAppContext } from '@/utils/AppContext';
 
 export default function UploadPage() {
-  const [extractedText, setExtractedText] = useState<string>('');
+  const { setExtractedText, setFileName } = useAppContext();
+  const [localText, setLocalText] = useState<string>('');
   const [summary, setSummary] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -18,12 +20,14 @@ export default function UploadPage() {
     setIsUploading(true);
     setError(null);
     setSummary('');
-    setExtractedText('');
+    setLocalText('');
 
     try {
       const response = await uploadNotes(uploadedFile);
       const cleanText = DOMPurify.sanitize(response.text);
+      setLocalText(cleanText);
       setExtractedText(cleanText);
+      setFileName(uploadedFile.name);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -36,13 +40,13 @@ export default function UploadPage() {
   };
 
   const handleGenerateSummary = async () => {
-    if (!extractedText) return;
+    if (!localText) return;
     
     setIsSummarizing(true);
     setError(null);
     
     try {
-      const response = await generateSummary(extractedText);
+      const response = await generateSummary(localText);
       const cleanSummary = DOMPurify.sanitize(response.summary);
       setSummary(cleanSummary);
     } catch (err: unknown) {
@@ -103,7 +107,7 @@ export default function UploadPage() {
 
         {/* Content columns */}
         <AnimatePresence>
-          {extractedText && (
+          {localText && (
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -130,7 +134,7 @@ export default function UploadPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleGenerateSummary}
-                    disabled={isSummarizing || !extractedText}
+                    disabled={isSummarizing || !localText}
                     className="btn-gradient flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     {isSummarizing ? (
@@ -158,7 +162,7 @@ export default function UploadPage() {
                     animate={{ opacity: 1 }}
                     className="text-slate-300 leading-relaxed whitespace-pre-wrap font-medium"
                   >
-                    {extractedText}
+                    {localText}
                   </motion.p>
                 </div>
               </div>

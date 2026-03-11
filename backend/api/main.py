@@ -1,15 +1,30 @@
 import os
+import sys
 import tempfile
 import shutil
+from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Import our independent modules
-from ingestion import extract_text_from_file
-from processor import process_lecture_text
-from quiz_generator import generate_quiz_with_retries
+# Add the parent directory to sys.path so we can import other modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-app = FastAPI(title="RAG Pipeline API")
+# Import our independent modules
+from data_processing.ingestion import extract_text_from_file
+from data_processing.processor import process_lecture_text
+from ai_core.quiz_generator import generate_quiz_with_retries
+
+app = FastAPI(title="NeuroNotes AI RAG Pipeline")
+
+# Enable CORS for the frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Setup your OpenAI API key (use environment variables in production)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-api-key-here")
@@ -17,7 +32,19 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-api-key-here")
 class QuizRequest(BaseModel):
     text: str
 
-@app.post("/upload-notes")
+class ChatRequest(BaseModel):
+    message: str
+    context: Optional[str] = None
+    history: Optional[List[dict]] = None
+
+class SummaryRequest(BaseModel):
+    text: str
+
+@app.get("/")
+async def root():
+    return {"message": "NeuroNotes AI API is live!", "version": "1.0.0"}
+
+@app.post("/api/upload")
 async def upload_notes(file: UploadFile = File(...)):
     """
     Ingests an uploaded file, extracts its text, and chunks it.
@@ -36,11 +63,11 @@ async def upload_notes(file: UploadFile = File(...)):
         # Chunk the result with the processor module
         document_chunks = process_lecture_text(extracted_text, source_filename=file.filename)
 
-        # Return the total chunk count and the first chunk's preview
+        # Return the extracted text for the UI and metadata
         return {
             "message": "File processed successfully",
+            "text": extracted_text,
             "chunk_count": len(document_chunks),
-            "preview": document_chunks[0].page_content if document_chunks else ""
         }
 
     except Exception as e:
@@ -53,7 +80,7 @@ async def upload_notes(file: UploadFile = File(...)):
             os.remove(temp_file_path)
 
 
-@app.post("/generate-quiz")
+@app.post("/api/generate-quiz")
 async def generate_quiz(request: QuizRequest):
     """
     Generates a 5-question MCQ based on the provided text.
@@ -70,6 +97,60 @@ async def generate_quiz(request: QuizRequest):
         
     except Exception as e:
         # Catch all errors and return a precise 500 response
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/summarize")
+async def summarize(request: SummaryRequest):
+    """
+    Generates a summary of the provided text.
+    """
+    try:
+        # For now, we'll use a simple prompt since we already have OpenAI integrated
+        # In a real scenario, this would be its own module
+        from langchain_openai import ChatOpenAI
+        from langchain_core.prompts import PromptTemplate
+        
+        llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
+        prompt = PromptTemplate.from_template("Summarize the following study material into clear, concise bullet points:\n\n{text}")
+        response = llm.invoke(prompt.format(text=request.text[:8000]))
+        
+        return {"summary": response.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    """
+    Basic chat endpoint for interacting with study notes.
+    """
+    try:
+        from langchain_openai import ChatOpenAI
+        from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+        
+        llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
+        
+        system_content = "You are a helpful study assistant. Help the student understand their notes."
+        if request.context:
+            system_content += f"\n\nContext from their notes:\n{request.context[:10000]}"
+            
+        messages = [
+            SystemMessage(content=system_content)
+        ]
+        
+        # Add history if available
+        if request.history:
+            for msg in request.history:
+                if msg["role"] == "user":
+                    messages.append(HumanMessage(content=msg["content"]))
+                elif msg["role"] == "assistant":
+                    messages.append(AIMessage(content=msg["content"]))
+        
+        messages.append(HumanMessage(content=request.message))
+        
+        response = llm.invoke(messages)
+        
+        return {"response": response.content}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
