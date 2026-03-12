@@ -14,14 +14,7 @@ interface Message {
 }
 
 export function ChatInterface() {
-  const { extractedText } = useAppContext();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I am NeuroNotes AI. How can I help you with your studies today?'
-    }
-  ]);
+  const { extractedText, messages, setMessages } = useAppContext();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

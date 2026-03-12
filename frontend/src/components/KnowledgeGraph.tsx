@@ -18,11 +18,26 @@ import { Network, AlertCircle, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/utils/AppContext';
 
 export function KnowledgeGraph() {
-  const { extractedText } = useAppContext();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const { extractedText, graphData, setGraphData } = useAppContext();
+  const [nodes, setNodes, onNodesChange] = useNodesState(graphData?.nodes || []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(graphData?.edges || []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync internal nodes/edges state with global graphData when it changes
+  useEffect(() => {
+    if (graphData && nodes.length === 0) {
+      setNodes(graphData.nodes);
+      setEdges(graphData.edges);
+    }
+  }, [graphData, nodes.length, setNodes, setEdges]);
+
+  // Update global state when nodes/edges change (for persistence)
+  useEffect(() => {
+    if (nodes.length > 0) {
+      setGraphData({ nodes, edges });
+    }
+  }, [nodes, edges, setGraphData]);
 
   const fetchGraphData = useCallback(async () => {
     if (!extractedText) {
@@ -52,6 +67,7 @@ export function KnowledgeGraph() {
 
         setNodes(enhancedNodes);
         setEdges(data.edges);
+        setGraphData({ nodes: enhancedNodes, edges: data.edges });
       } else {
         setError('Received invalid data format for knowledge graph.');
       }
@@ -64,13 +80,13 @@ export function KnowledgeGraph() {
     } finally {
       setIsLoading(false);
     }
-  }, [extractedText, setNodes, setEdges]);
+  }, [extractedText, setNodes, setEdges, setGraphData]);
 
   useEffect(() => {
-    if (extractedText && nodes.length === 0) {
+    if (extractedText && nodes.length === 0 && !graphData) {
       fetchGraphData();
     }
-  }, [extractedText, fetchGraphData, nodes.length]);
+  }, [extractedText, fetchGraphData, nodes.length, graphData]);
 
   const defaultEdgeOptions = useMemo(() => ({
     animated: true,

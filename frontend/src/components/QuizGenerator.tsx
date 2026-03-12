@@ -8,13 +8,27 @@ import DOMPurify from 'isomorphic-dompurify';
 import { useAppContext } from '@/utils/AppContext';
 
 export function QuizGenerator() {
-  const { extractedText } = useAppContext();
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const { extractedText, quizData, setQuizData } = useAppContext();
+  
+  const [questions, setQuestions] = useState<QuizQuestion[]>(quizData?.questions || []);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(quizData?.currentIdx || 0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>(quizData?.selectedAnswers || {});
+  const [showResults, setShowResults] = useState(quizData?.showResults || false);
+  
   const [isGenerating, setIsGenerating] = useState(false);
-  const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Update global state whenever local quiz state changes
+  useEffect(() => {
+    if (questions.length > 0) {
+      setQuizData({
+        questions,
+        currentIdx: currentQuestionIdx,
+        selectedAnswers,
+        showResults
+      });
+    }
+  }, [questions, currentQuestionIdx, selectedAnswers, showResults, setQuizData]);
 
   const handleGenerateQuiz = async () => {
     if (!extractedText) {
@@ -28,6 +42,7 @@ export function QuizGenerator() {
     setCurrentQuestionIdx(0);
     setShowResults(false);
     setError(null);
+    setQuizData(null);
 
     try {
       const response = await generateQuiz(extractedText);

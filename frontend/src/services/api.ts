@@ -46,18 +46,29 @@ export const generateQuiz = async (text: string): Promise<{ questions: QuizQuest
   };
 };
 
+interface BackendNode {
+  id: string;
+  label: string;
+}
+
+interface BackendEdge {
+  source: string;
+  target: string;
+  label: string;
+}
+
 export const getKnowledgeGraph = async (text: string): Promise<{ nodes: Node[]; edges: Edge[] }> => {
   const response = await api.post('/knowledge-graph', { text });
   
   // Transform backend response into ReactFlow format if needed
-  const nodes: Node[] = response.data.nodes.map((n: any, idx: number) => ({
+  const nodes: Node[] = response.data.nodes.map((n: BackendNode, idx: number) => ({
     id: n.id,
     data: { label: n.label },
     position: { x: 250 + (idx * 50), y: 100 + (idx * 100) }, // Better layout later
     type: 'default'
   }));
 
-  const edges: Edge[] = response.data.edges.map((e: any) => ({
+  const edges: Edge[] = response.data.edges.map((e: BackendEdge) => ({
     id: `e-${e.source}-${e.target}`,
     source: e.source,
     target: e.target,

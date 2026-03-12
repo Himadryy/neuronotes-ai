@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadDropzone } from '@/components/UploadDropzone';
 import { uploadNotes, generateSummary } from '@/services/api';
@@ -9,9 +9,8 @@ import { FileText, Sparkles, AlertCircle, BookOpen, Zap } from 'lucide-react';
 import { useAppContext } from '@/utils/AppContext';
 
 export default function UploadPage() {
-  const { extractedText, setExtractedText, setFileName } = useAppContext();
+  const { extractedText, setExtractedText, setFileName, summary, setSummary } = useAppContext();
   const [localText, setLocalText] = useState<string>(extractedText);
-  const [summary, setSummary] = useState<string>('');
   
   // Update local state when global context changes (e.g., on mount)
   useEffect(() => {

@@ -11,8 +11,10 @@ import {
   Network, 
   HelpCircle,
   BrainCircuit,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
+import { useAppContext } from '@/utils/AppContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -24,6 +26,7 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { clearAllData } = useAppContext();
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -126,7 +129,22 @@ export function Sidebar() {
           })}
         </motion.nav>
         
-        <div className="p-4 border-t border-white/5 bg-white/5 relative z-10">
+        <div className="p-4 border-t border-white/5 bg-white/5 relative z-10 space-y-2">
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              if (confirm('Are you sure you want to clear your current session? All uploaded notes and progress will be lost.')) {
+                clearAllData();
+                window.location.href = '/';
+              }
+            }}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 transition-all duration-300 group/clear"
+          >
+            <Trash2 className="w-5 h-5 group-hover/clear:scale-110 transition-transform" />
+            <span className="text-sm font-medium">Clear Session</span>
+          </motion.button>
+
           <motion.div 
             whileHover={{ scale: 1.02 }}
             className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/10 transition-all duration-300 cursor-pointer group/profile"
