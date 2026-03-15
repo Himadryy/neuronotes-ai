@@ -164,7 +164,7 @@ async def summarize(request: SummaryRequest):
     async def _run(llm):
         from langchain_core.prompts import PromptTemplate
         prompt = PromptTemplate.from_template("Summarize into clear bullet points:\n\n{text}")
-        response = await llm.ainvoke(prompt.format(text=request.text[:8000]))
+        response = await asyncio.to_thread(llm.invoke, prompt.format(text=request.text[:8000]))
         return response.content
     try:
         summary = await call_llm_with_fallback(_run)
@@ -186,7 +186,7 @@ async def chat(request: ChatRequest):
                 role = HumanMessage if msg["role"] == "user" else AIMessage
                 messages.append(role(content=msg["content"]))
         messages.append(HumanMessage(content=request.message))
-        response = await llm.ainvoke(messages)
+        response = await asyncio.to_thread(llm.invoke, messages)
         return response.content
     try:
         response = await call_llm_with_fallback(_run)
@@ -199,10 +199,10 @@ async def extract_knowledge_graph(request: SummaryRequest):
     async def _run(llm):
         try:
             structured_llm = llm.with_structured_output(GraphResponse)
-            return await structured_llm.ainvoke(f"Extract concepts and relationships from:\n{request.text[:5000]}")
+            return await asyncio.to_thread(structured_llm.invoke, f"Extract concepts and relationships from:\n{request.text[:5000]}")
         except:
             prompt = f"Extract knowledge graph nodes and edges as JSON from:\n{request.text[:4000]}"
-            response = await llm.ainvoke(prompt)
+            response = await asyncio.to_thread(llm.invoke, prompt)
             content = response.content
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()

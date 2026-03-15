@@ -72,8 +72,8 @@ async def generate_quiz_with_retries(context_text: str, llm) -> QuizOutput:
         formatted_input = prompt.format(context=context_text[:10000]) # Limit context to 10k chars
         
         if structured_llm:
-            # Use ainvoke for non-blocking execution
-            result = await structured_llm.ainvoke(formatted_input)
+            # Use asyncio.to_thread for non-blocking execution
+            result = await asyncio.to_thread(structured_llm.invoke, formatted_input)
             return cast(QuizOutput, result)
         else:
             raise Exception("Structured output not supported by this LLM instance")
@@ -106,8 +106,8 @@ async def generate_quiz_with_retries(context_text: str, llm) -> QuizOutput:
         }}
         """
         prompt = PromptTemplate(template=prompt_template, input_variables=["context"])
-        # Use ainvoke for non-blocking execution
-        response = await llm.ainvoke(prompt.format(context=context_text[:8000]))
+        # Use asyncio.to_thread for non-blocking execution
+        response = await asyncio.to_thread(llm.invoke, prompt.format(context=context_text[:8000]))
         
         content = response.content
         # Extract JSON from markdown if necessary
