@@ -15,6 +15,29 @@ export interface QuizQuestion {
   explanation: string;
 }
 
+export interface GraphNode {
+  id: string;
+  label: string;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  label: string;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface QuizData {
+  questions: QuizQuestion[];
+  currentIdx: number;
+  selectedAnswers: Record<number, number>;
+  showResults: boolean;
+}
+
 interface AppContextType {
   extractedText: string;
   setExtractedText: (text: string) => void;
@@ -24,10 +47,10 @@ interface AppContextType {
   setSummary: (summary: string) => void;
   messages: Message[];
   setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
-  graphData: { nodes: any[]; edges: any[] } | null;
-  setGraphData: (data: { nodes: any[]; edges: any[] } | null) => void;
-  quizData: { questions: QuizQuestion[]; currentIdx: number; selectedAnswers: Record<number, number>; showResults: boolean } | null;
-  setQuizData: (data: { questions: QuizQuestion[]; currentIdx: number; selectedAnswers: Record<number, number>; showResults: boolean } | null) => void;
+  graphData: GraphData | null;
+  setGraphData: (data: GraphData | null) => void;
+  quizData: QuizData | null;
+  setQuizData: (data: QuizData | null) => void;
   clearAllData: () => void;
 }
 
@@ -44,24 +67,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       content: 'Hello! I am NeuroNotes AI. How can I help you with your studies today?'
     }
   ]);
-  const [graphData, setGraphData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
-  const [quizData, setQuizData] = useState<{ questions: QuizQuestion[]; currentIdx: number; selectedAnswers: Record<number, number>; showResults: boolean } | null>(null);
+  const [graphData, setGraphData] = useState<GraphData | null>(null);
+  const [quizData, setQuizData] = useState<QuizData | null>(null);
 
   // Load from session storage on mount
   useEffect(() => {
-    const savedText = sessionStorage.getItem('neuronotes_text');
-    const savedName = sessionStorage.getItem('neuronotes_filename');
-    const savedSummary = sessionStorage.getItem('neuronotes_summary');
-    const savedMessages = sessionStorage.getItem('neuronotes_messages');
-    const savedGraph = sessionStorage.getItem('neuronotes_graph');
-    const savedQuiz = sessionStorage.getItem('neuronotes_quiz');
+    try {
+      const savedText = sessionStorage.getItem('neuronotes_text');
+      const savedName = sessionStorage.getItem('neuronotes_filename');
+      const savedSummary = sessionStorage.getItem('neuronotes_summary');
+      const savedMessages = sessionStorage.getItem('neuronotes_messages');
+      const savedGraph = sessionStorage.getItem('neuronotes_graph');
+      const savedQuiz = sessionStorage.getItem('neuronotes_quiz');
 
-    if (savedText) setExtractedText(savedText);
-    if (savedName) setFileName(savedName);
-    if (savedSummary) setSummary(savedSummary);
-    if (savedMessages) setMessagesState(JSON.parse(savedMessages));
-    if (savedGraph) setGraphData(JSON.parse(savedGraph));
-    if (savedQuiz) setQuizData(JSON.parse(savedQuiz));
+      if (savedText) setExtractedText(savedText);
+      if (savedName) setFileName(savedName);
+      if (savedSummary) setSummary(savedSummary);
+      if (savedMessages) setMessagesState(JSON.parse(savedMessages));
+      if (savedGraph) setGraphData(JSON.parse(savedGraph));
+      if (savedQuiz) setQuizData(JSON.parse(savedQuiz));
+    } catch (e) {
+      console.error("Failed to load state from sessionStorage:", e);
+    }
   }, []);
 
   const handleSetExtractedText = (text: string) => {
@@ -87,7 +114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const handleSetGraphData = (data: { nodes: any[]; edges: any[] } | null) => {
+  const handleSetGraphData = (data: GraphData | null) => {
     setGraphData(data);
     if (data) {
       sessionStorage.setItem('neuronotes_graph', JSON.stringify(data));
@@ -96,7 +123,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSetQuizData = (data: { questions: QuizQuestion[]; currentIdx: number; selectedAnswers: Record<number, number>; showResults: boolean } | null) => {
+  const handleSetQuizData = (data: QuizData | null) => {
     setQuizData(data);
     if (data) {
       sessionStorage.setItem('neuronotes_quiz', JSON.stringify(data));

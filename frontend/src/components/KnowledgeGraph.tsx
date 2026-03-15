@@ -10,34 +10,80 @@ import ReactFlow, {
   useEdgesState,
   Panel,
   BackgroundVariant,
-  Node
+  Node,
+  Edge
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getKnowledgeGraph } from '@/services/api';
 import { Network, AlertCircle, Sparkles } from 'lucide-react';
-import { useAppContext } from '@/utils/AppContext';
+import { useAppContext, GraphNode, GraphEdge } from '@/utils/AppContext';
+
+// Helper to transform our simple GraphNode to ReactFlow Node
+const transformNodes = (nodes: GraphNode[]): Node[] => {
+  return nodes.map((n, idx) => {
+    // Determine if it's a "main" node (id is '1' or it's the first one)
+    const isMain = n.id === '1' || idx === 0;
+    
+    // Create a circular layout
+    const angle = (idx / nodes.length) * 2 * Math.PI;
+    const radius = isMain ? 0 : 250;
+    const x = Math.cos(angle) * radius + 400;
+    const y = Math.sin(angle) * radius + 300;
+
+    let customClass = 'bg-slate-800/80 backdrop-blur-md border border-white/10 text-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.3)] px-5 py-3 font-medium transition-all hover:shadow-[0_4px_25px_rgba(99,102,241,0.2)] hover:border-indigo-500/50';
+    
+    if (isMain) {
+      customClass = 'bg-gradient-to-br from-indigo-600 to-purple-600 border border-indigo-400/50 text-white rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.4)] px-6 py-4 font-bold text-lg';
+    }
+
+    return {
+      id: n.id,
+      position: { x, y },
+      data: { label: n.label },
+      className: customClass
+    };
+  });
+};
+
+const transformEdges = (edges: GraphEdge[]): Edge[] => {
+  return edges.map((e, idx) => ({
+    id: `e-${idx}`,
+    source: e.source,
+    target: e.target,
+    label: e.label,
+    animated: true,
+    style: { stroke: '#818cf8', strokeWidth: 2 },
+    labelStyle: { fill: '#94a3b8', fontWeight: 700, fontSize: 10 },
+    labelBgStyle: { fill: '#0f172a', fillOpacity: 0.7 },
+    labelBgPadding: [4, 2] as [number, number],
+    labelBgBorderRadius: 4
+  }));
+};
 
 export function KnowledgeGraph() {
   const { extractedText, graphData, setGraphData } = useAppContext();
-  const [nodes, setNodes, onNodesChange] = useNodesState(graphData?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(graphData?.edges || []);
+  
+  // Use useMemo to avoid re-transforming on every render
+  const initialNodes = useMemo(() => 
+    graphData ? transformNodes(graphData.nodes) : [], 
+  [graphData]);
+  
+  const initialEdges = useMemo(() => 
+    graphData ? transformEdges(graphData.edges) : [], 
+  [graphData]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync internal nodes/edges state with global graphData when it changes
+  // Sync internal nodes/edges state with global graphData when it changes (e.g., after fetch)
   useEffect(() => {
     if (graphData && nodes.length === 0) {
-      setNodes(graphData.nodes);
-      setEdges(graphData.edges);
+      setNodes(transformNodes(graphData.nodes));
+      setEdges(transformEdges(graphData.edges));
     }
   }, [graphData, nodes.length, setNodes, setEdges]);
-
-  // Update global state when nodes/edges change (for persistence)
-  useEffect(() => {
-    if (nodes.length > 0) {
-      setGraphData({ nodes, edges });
-    }
-  }, [nodes, edges, setGraphData]);
 
   const fetchGraphData = useCallback(async () => {
     if (!extractedText) {
@@ -51,23 +97,10 @@ export function KnowledgeGraph() {
     try {
       const data = await getKnowledgeGraph(extractedText);
       if (data && data.nodes && data.edges) {
-        // Enhance node styling with glassmorphism classes
-        const enhancedNodes = data.nodes.map((n: Node) => {
-          let customClass = 'bg-slate-800/80 backdrop-blur-md border border-white/10 text-slate-100 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.3)] px-5 py-3 font-medium transition-all hover:shadow-[0_4px_25px_rgba(99,102,241,0.2)] hover:border-indigo-500/50';
-          
-          if (n.id === '1') {
-            customClass = 'bg-gradient-to-br from-indigo-600 to-purple-600 border border-indigo-400/50 text-white rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.4)] px-6 py-4 font-bold text-lg';
-          }
-
-          return {
-            ...n,
-            className: customClass
-          };
-        });
-
-        setNodes(enhancedNodes);
-        setEdges(data.edges);
-        setGraphData({ nodes: enhancedNodes, edges: data.edges });
+        // Now 'data.nodes' is already 'GraphNode[]' from the updated api.ts
+        setGraphData({ nodes: data.nodes, edges: data.edges });
+        setNodes(transformNodes(data.nodes));
+        setEdges(transformEdges(data.edges));
       } else {
         setError('Received invalid data format for knowledge graph.');
       }

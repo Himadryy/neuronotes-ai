@@ -5,6 +5,7 @@ uvicorn
 python-multipart
 langchain
 langchain-community
+langchain-ollama
 langchain-chroma
 langchain-text-splitters
 pydantic

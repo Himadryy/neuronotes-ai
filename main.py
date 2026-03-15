@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import json
 import time
+import asyncio
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
@@ -29,8 +30,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Setup your Gemini API key
+# Setup your Gemini API key (still used as fallback)
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# Configuration for Local AI (Ollama)
+USE_LOCAL_AI = os.getenv("USE_LOCAL_AI", "true").lower() == "true"
+LOCAL_OLLAMA_MODEL = os.getenv("LOCAL_OLLAMA_MODEL", "qwen2.5-coder:3b")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Path for logging user activities
 ACTIVITY_LOG_PATH = "user_activity.json"
@@ -55,30 +61,44 @@ def log_activity(action: str, details: dict):
     except Exception as e:
         print(f"Failed to log activity: {e}")
 
-async def call_gemini_with_fallback(func, *args, **kwargs):
+async def call_llm_with_fallback(func, *args, **kwargs):
     """
-    Tries multiple models and implements retries to bypass 429 errors.
+    Tries Local Ollama first if enabled, then falls back to Gemini models.
     """
-    import time
-    # Priority list of models to try
-    models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-flash-latest"]
+    from langchain_ollama import ChatOllama
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    
+    # 1. Try Local Ollama first
+    if USE_LOCAL_AI:
+        try:
+            print(f"--- Attempting Local AI: {LOCAL_OLLAMA_MODEL} ---")
+            llm = ChatOllama(
+                model=LOCAL_OLLAMA_MODEL,
+                base_url=OLLAMA_BASE_URL,
+                temperature=0.3
+            )
+            return await func(llm)
+        except Exception as e:
+            print(f"Local AI failed: {e}. Falling back to Gemini...")
+
+    # 2. Priority list of Gemini models
+    models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
     last_error = None
     
     for model_name in models:
-        for attempt in range(2):
-            try:
-                return await func(model_name)
-            except Exception as e:
-                last_error = e
-                err_msg = str(e)
-                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                    print(f"Quota hit for {model_name}, retrying in 2s...")
-                    time.sleep(2)
-                    continue
-                if "404" in err_msg or "not found" in err_msg:
-                    break # Try next model
-                raise e 
-    raise last_error
+        try:
+            print(f"--- Attempting Gemini: {model_name} ---")
+            llm = ChatGoogleGenerativeAI(
+                model=model_name, 
+                google_api_key=GOOGLE_API_KEY,
+                temperature=0.3
+            )
+            return await func(llm)
+        except Exception as e:
+            last_error = e
+            print(f"Gemini {model_name} failed: {e}")
+    
+    raise last_error or Exception("All LLM attempts failed")
 
 class QuizRequest(BaseModel):
     text: str
@@ -108,13 +128,6 @@ class GraphResponse(BaseModel):
 async def root():
     return {"message": "NeuroNotes AI API is live!", "version": "1.0.0"}
 
-@app.get("/api/activities")
-async def get_activities():
-    if os.path.exists(ACTIVITY_LOG_PATH):
-        with open(ACTIVITY_LOG_PATH, "r") as f:
-            return json.load(f)
-    return []
-
 @app.post("/api/upload")
 async def upload_notes(file: UploadFile = File(...)):
     temp_file_path = ""
@@ -124,12 +137,10 @@ async def upload_notes(file: UploadFile = File(...)):
             shutil.copyfileobj(file.file, tmp)
             temp_file_path = tmp.name
         extracted_text = extract_text_from_file(temp_file_path)
-        document_chunks = process_lecture_text(extracted_text, source_filename=file.filename)
-        log_activity("UPLOAD", {"filename": file.filename, "chunks": len(document_chunks)})
-        return {"message": "File processed successfully", "text": extracted_text, "chunk_count": len(document_chunks)}
+        process_lecture_text(extracted_text, source_filename=file.filename)
+        log_activity("UPLOAD", {"filename": file.filename})
+        return {"message": "File processed successfully", "text": extracted_text}
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         if temp_file_path and os.path.exists(temp_file_path):
@@ -137,83 +148,69 @@ async def upload_notes(file: UploadFile = File(...)):
 
 @app.post("/api/generate-quiz")
 async def generate_quiz(request: QuizRequest):
-    async def _run(model_name):
-        return generate_quiz_with_retries(request.text, GOOGLE_API_KEY)
+    async def _run(llm):
+        return await generate_quiz_with_retries(request.text, llm)
     try:
-        quiz_output = await call_gemini_with_fallback(_run)
+        quiz_output = await call_llm_with_fallback(_run)
         log_activity("QUIZ_GENERATION", {"text_length": len(request.text)})
         if hasattr(quiz_output, 'model_dump'):
             return quiz_output.model_dump()
-        return {"quiz": quiz_output}
+        return quiz_output
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Quiz Error: {str(e)}")
 
 @app.post("/api/summarize")
 async def summarize(request: SummaryRequest):
-    async def _run(model_name):
-        from langchain_google_genai import ChatGoogleGenerativeAI
+    async def _run(llm):
         from langchain_core.prompts import PromptTemplate
-        llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=GOOGLE_API_KEY)
-        prompt = PromptTemplate.from_template("Summarize the following study material into clear, concise bullet points:\n\n{text}")
-        return llm.invoke(prompt.format(text=request.text[:8000]))
+        prompt = PromptTemplate.from_template("Summarize into clear bullet points:\n\n{text}")
+        response = await llm.ainvoke(prompt.format(text=request.text[:8000]))
+        return response.content
     try:
-        response = await call_gemini_with_fallback(_run)
-        summary_content = response.content
-        if isinstance(summary_content, list):
-            summary_content = " ".join([item.get("text", "") if isinstance(item, dict) else str(item) for item in summary_content])
+        summary = await call_llm_with_fallback(_run)
         log_activity("SUMMARY_GENERATION", {"text_length": len(request.text)})
-        return {"summary": str(summary_content)}
+        return {"summary": str(summary)}
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Summary Error: {str(e)}")
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    async def _run(model_name):
-        from langchain_google_genai import ChatGoogleGenerativeAI
+    async def _run(llm):
         from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-        llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=GOOGLE_API_KEY)
-        system_content = "You are a helpful study assistant. Help the student understand their notes."
+        system_content = "You are a helpful study assistant."
         if request.context:
-            system_content += f"\n\nContext from their notes:\n{request.context[:10000]}"
+            system_content += f"\n\nContext:\n{request.context[:5000]}"
         messages = [SystemMessage(content=system_content)]
         if request.history:
             for msg in request.history:
-                if msg["role"] == "user":
-                    messages.append(HumanMessage(content=msg["content"]))
-                elif msg["role"] == "assistant":
-                    messages.append(AIMessage(content=msg["content"]))
+                role = HumanMessage if msg["role"] == "user" else AIMessage
+                messages.append(role(content=msg["content"]))
         messages.append(HumanMessage(content=request.message))
-        return llm.invoke(messages)
+        response = await llm.ainvoke(messages)
+        return response.content
     try:
-        response = await call_gemini_with_fallback(_run)
-        chat_content = response.content
-        if isinstance(chat_content, list):
-            chat_content = " ".join([item.get("text", "") if isinstance(item, dict) else str(item) for item in chat_content])
-        return {"response": str(chat_content)}
+        response = await call_llm_with_fallback(_run)
+        return {"response": str(response)}
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/knowledge-graph")
 async def extract_knowledge_graph(request: SummaryRequest):
-    async def _run(model_name):
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=GOOGLE_API_KEY, temperature=0.2)
-        structured_llm = llm.with_structured_output(GraphResponse)
-        prompt = f"Extract important concepts and relationships from:\n{request.text[:5000]}"
-        return structured_llm.invoke(prompt)
+    async def _run(llm):
+        try:
+            structured_llm = llm.with_structured_output(GraphResponse)
+            return await structured_llm.ainvoke(f"Extract concepts and relationships from:\n{request.text[:5000]}")
+        except:
+            prompt = f"Extract knowledge graph nodes and edges as JSON from:\n{request.text[:4000]}"
+            response = await llm.ainvoke(prompt)
+            content = response.content
+            if "```json" in content:
+                content = content.split("```json")[1].split("```")[0].strip()
+            return json.loads(content)
     try:
-        graph_data = await call_gemini_with_fallback(_run)
-        log_activity("GRAPH_EXTRACTION", {"text_length": len(request.text)})
+        graph_data = await call_llm_with_fallback(_run)
         return graph_data
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Graph Error: {str(e)}")
 
 if __name__ == "__main__":

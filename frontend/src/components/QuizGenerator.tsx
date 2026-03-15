@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateQuiz, QuizQuestion } from '@/services/api';
 import { Brain, CheckCircle2, XCircle, RefreshCw, Sparkles, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';

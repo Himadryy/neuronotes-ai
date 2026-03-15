@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { Node, Edge } from 'reactflow';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api',
@@ -42,41 +41,29 @@ export interface QuizQuestion {
 export const generateQuiz = async (text: string): Promise<{ questions: QuizQuestion[] }> => {
   const response = await api.post('/generate-quiz', { text });
   return {
-    questions: response.data.quiz
+    questions: response.data.quiz || response.data.questions || []
   };
 };
 
-interface BackendNode {
+export interface BackendNode {
   id: string;
   label: string;
 }
 
-interface BackendEdge {
+export interface BackendEdge {
   source: string;
   target: string;
   label: string;
 }
 
-export const getKnowledgeGraph = async (text: string): Promise<{ nodes: Node[]; edges: Edge[] }> => {
+export interface GraphResponse {
+  nodes: BackendNode[];
+  edges: BackendEdge[];
+}
+
+export const getKnowledgeGraph = async (text: string): Promise<GraphResponse> => {
   const response = await api.post('/knowledge-graph', { text });
-  
-  // Transform backend response into ReactFlow format if needed
-  const nodes: Node[] = response.data.nodes.map((n: BackendNode, idx: number) => ({
-    id: n.id,
-    data: { label: n.label },
-    position: { x: 250 + (idx * 50), y: 100 + (idx * 100) }, // Better layout later
-    type: 'default'
-  }));
-
-  const edges: Edge[] = response.data.edges.map((e: BackendEdge) => ({
-    id: `e-${e.source}-${e.target}`,
-    source: e.source,
-    target: e.target,
-    label: e.label,
-    animated: true
-  }));
-
-  return { nodes, edges };
+  return response.data;
 };
 
 export default api;
